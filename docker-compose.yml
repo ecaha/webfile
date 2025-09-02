@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: webfile-backend:latest
+    environment:
+      - UPLOAD_ROOT=/data
+    volumes:
+      - data:/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - webnet
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: webfile-frontend:latest
+    environment:
+      - BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - webnet
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    image: webfile-nginx:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - webnet
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  webnet:
+    driver: overlay

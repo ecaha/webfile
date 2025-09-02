@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebFile</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .path {
+      font-family: monospace;
+      color: #666;
+    }
+    .items {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+<main class="container">
+  <hgroup>
+    <h1>WebFile</h1>
+    <p class="path">Path: /{{ data.path }}</p>
+  </hgroup>
+
+  <article>
+    <form method="post" action="/mkdir" class="grid">
+      <input type="hidden" name="path" value="{{ data.path }}" />
+      <input name="name" placeholder="New folder name" required />
+      <button type="submit">Create folder</button>
+    </form>
+
+    <form id="uploadForm" method="post" action="/upload" enctype="multipart/form-data" class="grid">
+      <input type="hidden" name="path" value="{{ data.path }}" />
+      <label>
+        Files
+        <input id="filesInput" type="file" multiple />
+      </label>
+      <label>
+        Folder (Chrome/Edge)
+        <input id="folderInput" type="file" webkitdirectory directory />
+      </label>
+      <small>You can select individual files and/or a whole folder. Folder hierarchy is preserved.</small>
+      <button type="submit">Upload</button>
+    </form>
+    <script>
+      // Attach relative path for each file using webkitRelativePath when available
+      const form = document.getElementById('uploadForm');
+      const filesInput = document.getElementById('filesInput');
+      const folderInput = document.getElementById('folderInput');
+      form.addEventListener('submit', (e) => {
+        const files = filesInput?.files || [];
+        const folderFiles = folderInput?.files || [];
+        if ((!files || files.length === 0) && (!folderFiles || folderFiles.length === 0)) {
+          return; // let server handle empty submit gracefully
+        }
+        const fd = new FormData(form);
+        // Remove existing file/relpath entries to rebuild
+        // Note: constructing a new FormData is simpler
+        const fdNew = new FormData();
+        for (const [k, v] of fd.entries()) {
+          if (k !== 'file' && k !== 'relpath') fdNew.append(k, v);
+        }
+        // add plain files; relpath is just the filename
+        for (const f of files) {
+          fdNew.append('file', f, f.name);
+          fdNew.append('relpath', f.name);
+        }
+        // add folder files; use webkitRelativePath when present
+        for (const f of folderFiles) {
+          fdNew.append('file', f, f.name);
+          const rel = (f.webkitRelativePath && f.webkitRelativePath.length > 0) ? f.webkitRelativePath : f.name;
+          fdNew.append('relpath', rel);
+        }
+        // Send via fetch to keep relpaths aligned
+        e.preventDefault();
+        fetch(form.action + '?' + new URLSearchParams({ path: '{{ data.path }}' }), {
+          method: 'POST',
+          body: fdNew
+        }).then(r => {
+          if (r.ok) {
+            window.location = '/?path=' + encodeURIComponent('{{ data.path }}');
+          } else {
+            r.text().then(t => alert('Upload failed: ' + t));
+          }
+        }).catch(err => alert('Upload error: ' + err));
+      });
+    </script>
+  </article>
+
+  <article>
+    <header>Directory listing</header>
+    <table class="items">
+      <thead>
+        <tr><th>Name</th><th>Size</th><th>Modified</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+      {% if data.path %}
+        <tr>
+          <td colspan="4"><a href="/?path={{ data['parent'] }}">⬆️ Up one level</a></td>
+        </tr>
+      {% endif %}
+  {% for it in data['items'] %}
+        <tr>
+          <td>
+            {% if it.is_dir %}
+              <a href="/?path={{ it.path }}">📁 {{ it.name }}</a>
+            {% else %}
+              <a href="/download/{{ it.path }}">📄 {{ it.name }}</a>
+            {% endif %}
+          </td>
+          <td>{% if it.is_dir %}-{% else %}{{ it.size }} B{% endif %}</td>
+          <td>{{ it.mtime | round(0) }}</td>
+          <td>
+            {% if not it.is_dir %}<a href="/download/{{ it.path }}">Download</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</main>
+</body>
+</html>

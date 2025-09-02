@@ -1,0 +1,11 @@
+You will be creating a very simple application for serving files in local intranet by http/https protocol
+As a language use python and appropriate framework for backed and frontedn. I prefer flask.
+The application wil have frontend a backend API.
+It will run in docker, preferably two separate containers (frontend/backend)
+backend will use a volume to store data.
+The application will show contents of the volume (directory listing)
+It will allow to create folder, upload file, upload whole folder
+There will be always specific URI for each file. When you use this uri, it will directly download the file.
+the application will be served by gunicorn
+in the third container, there will be nginx as a proxy to apps
+orchestrate container by docker swarm
