@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ${REGISTRY}/webfile-backend:${TAG}
+    environment:
+      - UPLOAD_ROOT=/data
+    volumes:
+      - data:/data
+    networks:
+      - webnet
+
+  frontend:
+    image: ${REGISTRY}/webfile-frontend:${TAG}
+    environment:
+      - BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend
+    networks:
+      - webnet
+
+  nginx:
+    image: ${REGISTRY}/webfile-nginx:${TAG}
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - webnet
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  webnet:
+    driver: overlay
