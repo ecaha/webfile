@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Secrets / credentials
+.env
+*.env
+*.secret
+secrets.*
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+id_rsa
+id_rsa.pub
+
+# Tooling
+.azure/
+.vscode/
