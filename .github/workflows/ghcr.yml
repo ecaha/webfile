@@ -36,6 +36,7 @@ jobs:
           context: .
           file: backend/Dockerfile
           push: true
+          provenance: false
           tags: ghcr.io/${{ steps.lc.outputs.owner_lc }}/webfile-backend:latest
 
       - name: Build & push frontend
@@ -44,6 +45,7 @@ jobs:
           context: .
           file: frontend/Dockerfile
           push: true
+          provenance: false
           tags: ghcr.io/${{ steps.lc.outputs.owner_lc }}/webfile-frontend:latest
 
       - name: Build & push nginx
@@ -52,6 +54,7 @@ jobs:
           context: .
           file: nginx/Dockerfile
           push: true
+          provenance: false
           tags: ghcr.io/${{ steps.lc.outputs.owner_lc }}/webfile-nginx:latest
 
       - name: Keep only latest - backend

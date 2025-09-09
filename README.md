@@ -80,12 +80,11 @@ sudo docker stack deploy -c docker-compose.yml webfile
 sudo docker stack services webfile
 ```
 
-2) Push to GitHub Container Registry (GHCR), then deploy (recommended for CI/CD)
-- A GitHub Actions workflow builds and pushes these images with the `latest` tag on pushes to `main`:
-  - `ghcr.io/<OWNER>/webfile-backend:latest`
-  - `ghcr.io/<OWNER>/webfile-frontend:latest`
-  - `ghcr.io/<OWNER>/webfile-nginx:latest`
-- Only the latest versions are kept via package cleanup steps.
+2) Deploy from GHCR (recommended for CI/CD)
+- The workflow publishes:
+  - ghcr.io/<OWNER>/webfile-backend:latest
+  - ghcr.io/<OWNER>/webfile-frontend:latest
+  - ghcr.io/<OWNER>/webfile-nginx:latest
 
 On the remote server (bash):
 
@@ -96,7 +95,7 @@ sudo docker swarm init
 # login to GHCR (PAT needs at least read:packages)
 echo <PAT> | sudo docker login ghcr.io -u <GITHUB_USERNAME> --password-stdin
 
-# set env for compose variable substitution (use latest tag)
+# set env for compose substitution (use latest)
 export REGISTRY="ghcr.io/<OWNER>"
 export TAG="latest"
 
@@ -104,15 +103,15 @@ export TAG="latest"
 cd /opt && sudo git clone <your-repo-url> webfile || true
 cd /opt/webfile
 
-# deploy merging the override to use GHCR images
-sudo docker stack deploy -c docker-compose.yml -c stack.remote.yml webfile
+# IMPORTANT: use only the remote stack file (no build keys) and preserve env with sudo
+sudo --preserve-env=REGISTRY,TAG docker stack deploy -c stack.remote.yml webfile
 
 sudo docker stack services webfile
 ```
 
 Upgrade/Rollback
-- New commits to `main` produce new `latest` images; redeploy will pull the updated latest.
-- If you need immutable tags, adjust the workflow to include a version tag and reference it instead of `latest`.
+- New commits to main produce new latest images; re-run the deploy command to pull and update.
+- For immutable versioned tags, adjust the workflow and set TAG accordingly.
 
 Ports & firewall
 - Ensure TCP 8080 is open on the server’s firewall to access Nginx.
