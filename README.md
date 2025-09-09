@@ -19,6 +19,7 @@ Simple intranet file server with Flask frontend and backend, proxied by Nginx. R
 - `nginx/` Nginx config and Dockerfile
 - `docker-compose.yml` Swarm stack file
 - `data/` local data folder (for dev, mapped into volume in Swarm)
+- `.github/workflows/ghcr.yml` GitHub Actions to build and push images to GHCR (latest tag only)
 
 ## Run (Docker Swarm)
 Initialize Swarm if needed and deploy the stack.
@@ -80,37 +81,11 @@ sudo docker stack services webfile
 ```
 
 2) Push to GitHub Container Registry (GHCR), then deploy (recommended for CI/CD)
-- You’ll need a GitHub Personal Access Token (PAT):
-  - Classic PAT scopes: `write:packages`, `read:packages` (and optionally `delete:packages`)
-  - Or a fine-grained PAT with Packages: Read/Write on your org/user
-- Images will be published to `ghcr.io/<OWNER>` where `<OWNER>` is your GitHub username or org.
-
-From your workstation (PowerShell):
-
-```powershell
-# login to GHCR (create a PAT, then paste it when prompted)
-docker login ghcr.io -u <GITHUB_USERNAME>
-
-# set owner namespace and a tag
-$env:OWNER = "<GITHUB_USERNAME_OR_ORG>"
-$env:REGISTRY = "ghcr.io/$env:OWNER"
-$env:TAG = "1.0.0"
-
-# build local images
-docker build -t webfile-backend:latest -f backend/Dockerfile .
-docker build -t webfile-frontend:latest -f frontend/Dockerfile .
-docker build -t webfile-nginx:latest -f nginx/Dockerfile .
-
-# tag for GHCR
-docker tag webfile-backend:latest  $env:REGISTRY/webfile-backend:$env:TAG
-docker tag webfile-frontend:latest $env:REGISTRY/webfile-frontend:$env:TAG
-docker tag webfile-nginx:latest    $env:REGISTRY/webfile-nginx:$env:TAG
-
-# push to GHCR
-docker push $env:REGISTRY/webfile-backend:$env:TAG
-docker push $env:REGISTRY/webfile-frontend:$env:TAG
-docker push $env:REGISTRY/webfile-nginx:$env:TAG
-```
+- A GitHub Actions workflow builds and pushes these images with the `latest` tag on pushes to `main`:
+  - `ghcr.io/<OWNER>/webfile-backend:latest`
+  - `ghcr.io/<OWNER>/webfile-frontend:latest`
+  - `ghcr.io/<OWNER>/webfile-nginx:latest`
+- Only the latest versions are kept via package cleanup steps.
 
 On the remote server (bash):
 
@@ -121,9 +96,9 @@ sudo docker swarm init
 # login to GHCR (PAT needs at least read:packages)
 echo <PAT> | sudo docker login ghcr.io -u <GITHUB_USERNAME> --password-stdin
 
-# set env for compose variable substitution
-export REGISTRY="ghcr.io/<GITHUB_USERNAME_OR_ORG>"
-export TAG="1.0.0"
+# set env for compose variable substitution (use latest tag)
+export REGISTRY="ghcr.io/<OWNER>"
+export TAG="latest"
 
 # obtain the repo on server
 cd /opt && sudo git clone <your-repo-url> webfile || true
@@ -136,8 +111,8 @@ sudo docker stack services webfile
 ```
 
 Upgrade/Rollback
-- Push a new tag to GHCR and redeploy with the new `TAG`. Swarm will roll your services.
-- To roll back, redeploy with the previous `TAG`.
+- New commits to `main` produce new `latest` images; redeploy will pull the updated latest.
+- If you need immutable tags, adjust the workflow to include a version tag and reference it instead of `latest`.
 
 Ports & firewall
 - Ensure TCP 8080 is open on the server’s firewall to access Nginx.

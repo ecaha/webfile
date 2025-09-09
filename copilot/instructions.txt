@@ -9,3 +9,4 @@ There will be always specific URI for each file. When you use this uri, it will 
 the application will be served by gunicorn
 in the third container, there will be nginx as a proxy to apps
 orchestrate container by docker swarm
+In the end add github actions pipeline to build containers push them in GHCR. Have only the latest version available for now.
